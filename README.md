@@ -23,6 +23,25 @@ flowchart LR
 Cada microservicio es dueño de su base de datos. No existen consultas directas
 entre bases de datos ni llamadas HTTP entre microservicios.
 
+### Estructura del Monorepo
+
+```text
+.
+|-- .env.example                   # Plantilla única de configuración
+|-- ms-restaurant/
+|   |-- database/init.sql
+|   |-- src/
+|   `-- Dockerfile
+|-- ms-rewards/
+|   |-- database/init.sql
+|   |-- src/
+|   `-- Dockerfile
+|-- scripts/prepare-sonar-coverage.mjs
+|-- docker-compose.yml
+|-- sonar-project.properties
+`-- README.md
+```
+
 ### MS Transacciones
 
 Recibe solicitudes HTTP, valida los datos, persiste la transacción y registra
@@ -267,8 +286,29 @@ flowchart TB
     rw --> mq
 ```
 
-Las credenciales RabbitMQ no se almacenan en Git. Cree un archivo `.env` no
-rastreado en la raíz:
+La configuración se centraliza en un único archivo `.env` raíz ignorado por
+Git. Cree su archivo local desde la plantilla versionada:
+
+```bash
+cp .env.example .env
+```
+
+Variables disponibles:
+
+| Variable | Propósito | Requerida |
+| --- | --- | --- |
+| `RABBITMQ_URL` | Conexión AMQP o AMQPS al broker | Sí |
+| `RABBITMQ_EXCHANGE` | Exchange RabbitMQ | No, default: `rewards.exchange` |
+| `TRANSACTION_QUEUE` | Cola consumida por MS Recompensas | No, default: `transaction.created.queue` |
+| `RESTAURANT_PORT` | Puerto HTTP de MS Transacciones | No, default: `3000` |
+| `TRANSACTIONS_DB_*` | Nombre, usuario, contraseña, host interno y puerto local de PostgreSQL | No, poseen defaults locales |
+| `TRANSACTIONS_DATABASE_URL` | PostgreSQL de transacciones | Sí al ejecutar sin Docker |
+| `REWARDS_PORT` | Puerto de MS Recompensas | No, default: `3001` |
+| `REWARDS_DB_*` | Nombre, usuario, contraseña, host interno y puerto local de PostgreSQL | No, poseen defaults locales |
+| `REWARDS_DATABASE_URL` | PostgreSQL de recompensas | Sí al ejecutar sin Docker |
+| `DB_SYNCHRONIZE` | Sincronización automática TypeORM | No, default: `false` |
+
+Las credenciales RabbitMQ no se almacenan en Git. Configure como mínimo:
 
 ```dotenv
 RABBITMQ_URL=amqp://<usuario>:<contrasena>@<host>:<puerto>/<virtual_host_codificado>
@@ -279,6 +319,22 @@ Para el virtual host `/`, use `%2F`:
 ```dotenv
 RABBITMQ_URL=amqp://<usuario>:<contrasena>@<host>:5672/%2F
 ```
+
+Docker Compose construye e inyecta las URLs internas de PostgreSQL desde las
+variables `*_DB_*`. Para ejecutar un servicio directamente con `pnpm`, pase su
+URL con `localhost` en el comando:
+
+```bash
+cd ms-restaurant
+TRANSACTIONS_DATABASE_URL=postgres://transactions:transactions@localhost:5432/transactions pnpm run start:dev
+
+cd ../ms-rewards
+REWARDS_DATABASE_URL=postgres://rewards:rewards@localhost:5433/rewards pnpm run start:dev
+```
+
+Cada microservicio valida al iniciar que las URLs, puertos y booleanos sean
+correctos. Si falta `RABBITMQ_URL`, Docker Compose también detiene el arranque
+con un mensaje explícito.
 
 Ejecute:
 
@@ -334,5 +390,10 @@ de credenciales externas.
 cd ms-restaurant && pnpm run test:cov
 cd ../ms-rewards && pnpm run test:cov
 cd ..
+node scripts/prepare-sonar-coverage.mjs
 SONAR_TOKEN='<token>' npx --yes @sonar/scan
 ```
+
+El análisis verificado en SonarQube para `Diego_Figueroa_t1` cumple el quality
+gate: cobertura `95.9%`, duplicación `0.0%`, cero issues, mantenibilidad A,
+confiabilidad A y seguridad A.

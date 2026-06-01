@@ -8,18 +8,20 @@ import { TransactionsController } from './adapters/in/http/transactions.controll
 import { CreateTransactionUseCase } from './application/create-transaction.use-case';
 import { CREATE_TRANSACTION_GATEWAY } from './application/ports/out/create-transaction.gateway';
 import { RabbitMqOutboxPublisher } from './adapters/out/messaging/rabbitmq-outbox.publisher';
+import { validateEnvironment } from './infrastructure/config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '../.env',
+      validate: validateEnvironment,
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: config.get<string>(
-          'DATABASE_URL',
-          'postgres://postgres:postgres@localhost:5432/transactions',
-        ),
+        url: config.getOrThrow<string>('TRANSACTIONS_DATABASE_URL'),
         entities: [TransactionEntity, OutboxMessageEntity],
         synchronize: config.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
       }),

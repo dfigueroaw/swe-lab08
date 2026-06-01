@@ -19,7 +19,7 @@ describeWithStack('Rewards processing (e2e)', () => {
 
     const client = new Client({
       connectionString:
-        process.env.DATABASE_URL ??
+        process.env.REWARDS_DATABASE_URL ??
         'postgres://rewards:rewards@localhost:5433/rewards',
     });
     await client.connect();

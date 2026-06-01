@@ -11,18 +11,20 @@ import { ProcessRewardUseCase } from './application/process-reward.use-case';
 import { RewardCalculator } from './domain/reward-calculator';
 import { RabbitMqTransactionConsumer } from './adapters/in/messaging/rabbitmq-transaction.consumer';
 import { RabbitMqOutboxPublisher } from './adapters/out/messaging/rabbitmq-outbox.publisher';
+import { validateEnvironment } from './infrastructure/config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '../.env',
+      validate: validateEnvironment,
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: config.get<string>(
-          'DATABASE_URL',
-          'postgres://postgres:postgres@localhost:5433/rewards',
-        ),
+        url: config.getOrThrow<string>('REWARDS_DATABASE_URL'),
         entities: [
           RewardEntity,
           RewardAccountEntity,

@@ -2,15 +2,15 @@ services:
   transactions-db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: transactions
-      POSTGRES_USER: transactions
-      POSTGRES_PASSWORD: transactions
+      POSTGRES_DB: ${TRANSACTIONS_DB_NAME:-transactions}
+      POSTGRES_USER: ${TRANSACTIONS_DB_USER:-transactions}
+      POSTGRES_PASSWORD: ${TRANSACTIONS_DB_PASSWORD:-transactions}
     ports:
-      - "5432:5432"
+      - "${TRANSACTIONS_DB_PORT:-5432}:5432"
     volumes:
       - ./ms-restaurant/database/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U transactions"]
+      test: ["CMD-SHELL", "pg_isready -U ${TRANSACTIONS_DB_USER:-transactions}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -18,15 +18,15 @@ services:
   rewards-db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: rewards
-      POSTGRES_USER: rewards
-      POSTGRES_PASSWORD: rewards
+      POSTGRES_DB: ${REWARDS_DB_NAME:-rewards}
+      POSTGRES_USER: ${REWARDS_DB_USER:-rewards}
+      POSTGRES_PASSWORD: ${REWARDS_DB_PASSWORD:-rewards}
     ports:
-      - "5433:5432"
+      - "${REWARDS_DB_PORT:-5433}:5432"
     volumes:
       - ./ms-rewards/database/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rewards"]
+      test: ["CMD-SHELL", "pg_isready -U ${REWARDS_DB_USER:-rewards}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -34,11 +34,13 @@ services:
   ms-restaurant:
     build: ./ms-restaurant
     environment:
-      PORT: 3000
-      DATABASE_URL: postgres://transactions:transactions@transactions-db:5432/transactions
+      RESTAURANT_PORT: ${RESTAURANT_PORT:-3000}
+      TRANSACTIONS_DATABASE_URL: postgres://${TRANSACTIONS_DB_USER:-transactions}:${TRANSACTIONS_DB_PASSWORD:-transactions}@${TRANSACTIONS_DB_HOST:-transactions-db}:5432/${TRANSACTIONS_DB_NAME:-transactions}
       RABBITMQ_URL: ${RABBITMQ_URL:?Set RABBITMQ_URL in your shell or root .env file}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-rewards.exchange}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-false}
     ports:
-      - "3000:3000"
+      - "${RESTAURANT_PORT:-3000}:${RESTAURANT_PORT:-3000}"
     depends_on:
       transactions-db:
         condition: service_healthy
@@ -46,9 +48,12 @@ services:
   ms-rewards:
     build: ./ms-rewards
     environment:
-      PORT: 3001
-      DATABASE_URL: postgres://rewards:rewards@rewards-db:5432/rewards
+      REWARDS_PORT: ${REWARDS_PORT:-3001}
+      REWARDS_DATABASE_URL: postgres://${REWARDS_DB_USER:-rewards}:${REWARDS_DB_PASSWORD:-rewards}@${REWARDS_DB_HOST:-rewards-db}:5432/${REWARDS_DB_NAME:-rewards}
       RABBITMQ_URL: ${RABBITMQ_URL:?Set RABBITMQ_URL in your shell or root .env file}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-rewards.exchange}
+      TRANSACTION_QUEUE: ${TRANSACTION_QUEUE:-transaction.created.queue}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-false}
     depends_on:
       rewards-db:
         condition: service_healthy
