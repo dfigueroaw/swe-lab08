@@ -1,0 +1,60 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      rabbitmq:
+        image: rabbitmq:4-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: rewards
+          RABBITMQ_DEFAULT_PASS: rewards
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    strategy:
+      matrix:
+        service: [ms-restaurant, ms-rewards]
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ${{ matrix.service }}/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --check "src/**/*.ts" "test/**/*.ts"
+      - run: pnpm exec eslint "{src,test}/**/*.ts"
+      - run: pnpm run test:cov --runInBand
+      - run: pnpm run test --runInBand
+        env:
+          RUN_STACK_INTEGRATION: true
+          TRANSACTIONS_DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+          REWARDS_DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+          RABBITMQ_URL: amqp://rewards:rewards@localhost:5672
+      - run: pnpm run build
