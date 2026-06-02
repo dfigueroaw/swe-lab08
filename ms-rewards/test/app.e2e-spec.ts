@@ -37,5 +37,5 @@ describeWithStack('Rewards processing (e2e)', () => {
     } finally {
       await client.end();
     }
-  });
+  }, 15_000);
 });

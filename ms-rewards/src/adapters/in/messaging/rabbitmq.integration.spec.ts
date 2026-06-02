@@ -13,6 +13,7 @@ describeWithStack('RabbitMQ integration', () => {
   beforeAll(async () => {
     connection = await amqp.connect(
       process.env.RABBITMQ_URL ?? 'amqp://rewards:rewards@localhost:5672',
+      { timeout: 5000 },
     );
     channel = await connection.createConfirmChannel();
     await channel.assertExchange(exchange, 'topic', { durable: false });
