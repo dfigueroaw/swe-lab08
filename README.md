@@ -74,6 +74,15 @@ flowchart LR
 | `RabbitMqTransactionConsumer` | Consume y valida `transaction.created` |
 | `RabbitMqOutboxPublisher` | Publica eventos `reward.processed` pendientes |
 
+## Patrones de diseño
+
+Se implementó una arquitectura basada en microservicios, compuesta por dos servicios independientes: el microservicio de restaurante y el microservicio de recompensas. Cada uno cuenta con su propia base de datos, lo que favorece la independencia, escalabilidad y autonomía de los servicios.
+
+Asimismo, se adoptó una arquitectura hexagonal con el objetivo de garantizar un bajo acoplamiento y una alta cohesión entre los distintos componentes del sistema. Este enfoque permite aislar la lógica de negocio de las dependencias externas y facilita la mantenibilidad y evolución de la aplicación. Adicionalmente, el uso de adaptadores (adapters) simplifica la integración y sustitución de tecnologías de mensajería, permitiendo intercambiar soluciones como RabbitMQ, Kafka u otras alternativas con un impacto mínimo en el núcleo de la aplicación.
+
+Como parte de la experimentación con patrones de diseño, se incorporó el patrón **Value Object**, el cual encapsula conceptos del dominio mediante tipos específicos en lugar de tipos primitivos. Esto contribuye a mejorar la expresividad del código, reforzar las reglas de negocio y aumentar la seguridad de tipos (*type safety*), reduciendo la probabilidad de errores relacionados con el manejo incorrecto de datos.
+
+
 ## Casos de Uso
 
 ### Registrar Transacción
@@ -93,6 +102,8 @@ flowchart LR
 4. Se guardan la cuenta, recompensa, inbox y outbox en una única transacción SQL.
 5. El consumidor confirma el mensaje.
 6. El publicador outbox envía `reward.processed`.
+
+![alt text](image-1.png)
 
 ## Reglas de Recompensa
 
@@ -341,3 +352,7 @@ RUN_STACK_E2E=true pnpm run test:e2e
 ```
 
 El pipeline de GitHub Actions ejecuta formato, lint, cobertura, integración y compilación. Para las pruebas usa PostgreSQL y RabbitMQ efímeros, sin depender de credenciales externas.
+
+### Evidencia SonarQube
+
+![alt text](image.png)
