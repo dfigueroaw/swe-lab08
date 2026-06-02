@@ -1,14 +1,10 @@
 # Sistema de Recompensas Orientado a Eventos
 
-Sistema de recompensas para consumos en restaurantes. Está implementado como
-un monorepo con dos microservicios independientes construidos con NestJS,
-TypeScript, TypeORM, PostgreSQL y RabbitMQ.
+Sistema de recompensas para consumos en restaurantes. Está implementado como un monorepo con dos microservicios independientes construidos con NestJS, TypeScript, TypeORM, PostgreSQL y RabbitMQ.
 
 ## Arquitectura General
 
-El Servicio de Transacciones registra un consumo y publica el evento
-`transaction.created`. El Servicio de Recompensas consume ese evento, calcula
-los beneficios, actualiza la cuenta del cliente y publica `reward.processed`.
+El Servicio de Transacciones registra un consumo y publica el evento `transaction.created`. El Servicio de Recompensas consume ese evento, calcula los beneficios, actualiza la cuenta del cliente y publica `reward.processed`.
 
 ```mermaid
 flowchart LR
@@ -20,27 +16,7 @@ flowchart LR
     rewards -->|reward.processed| mq
 ```
 
-Cada microservicio es dueño de su base de datos. No existen consultas directas
-entre bases de datos ni llamadas HTTP entre microservicios.
-
-### Estructura del Monorepo
-
-```text
-.
-|-- .env.example                   # Plantilla única de configuración
-|-- ms-restaurant/
-|   |-- database/init.sql
-|   |-- src/
-|   `-- Dockerfile
-|-- ms-rewards/
-|   |-- database/init.sql
-|   |-- src/
-|   `-- Dockerfile
-|-- scripts/prepare-sonar-coverage.mjs
-|-- docker-compose.yml
-|-- sonar-project.properties
-`-- README.md
-```
+Cada microservicio es dueño de su base de datos. No existen consultas directas entre bases de datos ni llamadas HTTP entre microservicios.
 
 ### MS Transacciones
 
@@ -320,22 +296,6 @@ Para el virtual host `/`, use `%2F`:
 RABBITMQ_URL=amqp://<usuario>:<contrasena>@<host>:5672/%2F
 ```
 
-Docker Compose construye e inyecta las URLs internas de PostgreSQL desde las
-variables `*_DB_*`. Para ejecutar un servicio directamente con `pnpm`, pase su
-URL con `localhost` en el comando:
-
-```bash
-cd ms-restaurant
-TRANSACTIONS_DATABASE_URL=postgres://transactions:transactions@localhost:5432/transactions pnpm run start:dev
-
-cd ../ms-rewards
-REWARDS_DATABASE_URL=postgres://rewards:rewards@localhost:5433/rewards pnpm run start:dev
-```
-
-Cada microservicio valida al iniciar que las URLs, puertos y booleanos sean
-correctos. Si falta `RABBITMQ_URL`, Docker Compose también detiene el arranque
-con un mensaje explícito.
-
 Ejecute:
 
 ```bash
@@ -380,20 +340,4 @@ Pruebas E2E con el stack Docker activo:
 RUN_STACK_E2E=true pnpm run test:e2e
 ```
 
-El pipeline de GitHub Actions ejecuta formato, lint, cobertura, integración y
-compilación. Para las pruebas usa PostgreSQL y RabbitMQ efímeros, sin depender
-de credenciales externas.
-
-### SonarQube
-
-```bash
-cd ms-restaurant && pnpm run test:cov
-cd ../ms-rewards && pnpm run test:cov
-cd ..
-node scripts/prepare-sonar-coverage.mjs
-SONAR_TOKEN='<token>' npx --yes @sonar/scan
-```
-
-El análisis verificado en SonarQube para `Diego_Figueroa_t1` cumple el quality
-gate: cobertura `95.9%`, duplicación `0.0%`, cero issues, mantenibilidad A,
-confiabilidad A y seguridad A.
+El pipeline de GitHub Actions ejecuta formato, lint, cobertura, integración y compilación. Para las pruebas usa PostgreSQL y RabbitMQ efímeros, sin depender de credenciales externas.
