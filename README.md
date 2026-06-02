@@ -356,3 +356,5 @@ El pipeline de GitHub Actions ejecuta formato, lint, cobertura, integración y c
 ### Evidencia SonarQube
 
 ![alt text](image.png)
+
+Enlace: https://sonarqube.ingsoftware.lat/dashboard?id=Diego_Figueroa_t1
